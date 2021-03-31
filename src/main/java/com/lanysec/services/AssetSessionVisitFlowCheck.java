@@ -123,6 +123,8 @@ public class AssetSessionVisitFlowCheck implements AssetSessionVisitConstants {
             public void run() {
                 try {
                     ModelParamsConfigurer.reloadModelingParams();
+                    ModelParamsConfigurer.reloadBuildModelAssetId();
+                    ModelParamsConfigurer.reloadBuildModelResult();
                     logger.info("reload model params configurer.");
                 } catch (Throwable throwable) {
                     logger.error("timer schedule at fixed rate failed ", throwable);

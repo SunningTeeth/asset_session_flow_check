@@ -40,48 +40,6 @@ public class AssetSessionVisitCheckModelSourceFunction extends RichMapFunction<S
 
     private static final Logger logger = LoggerFactory.getLogger(AssetSessionVisitCheckModelSourceFunction.class);
 
-    /**
-     * 存储当前模型建模结果
-     * key : modelingParamsId
-     * value : k: srcId ===> v : 一条记录
-     */
-    private final List<Map<String, Object>> modelResults = new ArrayList<>();
-
-    @Override
-    public void open(Configuration parameters) throws Exception {
-        super.open(parameters);
-        Connection connection = DbConnectUtil.getConnection();
-        String sql = "SELECT " +
-                "c.modeling_params_id,r.flow,r.src_ip,r.src_id,r.protocol,r.up_down,c.model_check_alt_params " +
-                "FROM model_result_asset_session_flow r,model_check_params c " +
-                "WHERE " +
-                "r.modeling_params_id = c.modeling_params_id " +
-                "AND c.model_type = 1 " +
-                "AND c.model_child_type = 1 " +
-                "AND c.model_check_switch = 1 " +
-                "AND c.modify_time > DATE_SUB( NOW(), INTERVAL 10 MINUTE );";
-
-        ResultSet resultSet = connection.prepareStatement(sql).executeQuery();
-        while (resultSet.next()) {
-            Map<String, Object> map = new HashMap<>(5);
-            String modelingParamsId = ConversionUtil.toString(resultSet.getString("modeling_params_id"));
-            String flowSegment = ConversionUtil.toString(resultSet.getString("flow"));
-            String srcIp = ConversionUtil.toString(resultSet.getString("src_ip"));
-            String srcId = ConversionUtil.toString(resultSet.getString("src_id"));
-            String protocol = ConversionUtil.toString(resultSet.getString("protocol"));
-            String upDown = ConversionUtil.toString(resultSet.getString("up_down"));
-            String modelCheckAltParams = ConversionUtil.toString(resultSet.getString("model_check_alt_params"));
-            map.put("modelingParamsId", modelingParamsId);
-            map.put("flowSegment", flowSegment);
-            map.put("srcIp", srcIp);
-            map.put("srcId", srcId);
-            map.put("protocol", protocol);
-            map.put("upDown", upDown);
-            map.put("modelCheckAltParams", modelCheckAltParams);
-            modelResults.add(map);
-        }
-    }
-
     @Override
     public String map(String line) throws Exception {
         //{"L7P":"tls","InPackets":20,"ClusterID":"EWN7S4UJ","L3P":"IP","OutFlow":1350,"OutPackets":10,"OutFlags":0,"InFlow":1950,"rHost":"192.168.9.58","SrcID":"ast_458b6b75b0610d081dc83c7c6a34498a","ID":"fle_TTJoPs5YQoTQwZqGbkfvmG","sTime":1615090860000,"SrcCountry":"中国北京","rType":"1","SrcPort":17339,"DstLocName":"杭州","eTime":1615090981000,"AreaID":19778692,"L4P":"TCP","DstCountry":"中国","InFlags":0,"MetaID":"evm_flow","DstPort":443,"SrcIP":"192.168.7.249","ESMetaID":"esm_flow","SID":"1296f58e4f3ab1c3ced4bce072532608","FlowID":"1296f58e4f3ab1c3ced4bce072532608","rTime":1615090981139,"@timestamp":1615090995592,"DstID":"","DstIP":"47.111.111.35","DstMAC":"bc:3f:8f:63:6c:80","PcapID":"","TrafficSource":"eth1","SrcMAC":"4c:cc:6a:57:95:8a","Key":"","SrcLocName":"未知"}
@@ -94,7 +52,7 @@ public class AssetSessionVisitCheckModelSourceFunction extends RichMapFunction<S
         int outFlow = ConversionUtil.toInt(json.get("OutFlow"));
 
         String key = ConversionUtil.toString(calculateSegmentCurrKey());
-
+        List<Map<String, Object>> modelResults = ModelParamsConfigurer.getModelResults();
         for (Map<String, Object> map : modelResults) {
 
             //TODO 排除白名单 放行
